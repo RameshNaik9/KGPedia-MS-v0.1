@@ -39,6 +39,12 @@ def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngin
         }
     return chat_sessions[conversation_id]['engine']
 
+
+@app.get("/")
+def health_check():
+    return {"message": "FastAPI Chat Assistant is running!"}
+
+
 @app.post("/chat/{conversation_id}", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
@@ -86,7 +92,7 @@ def reset_chat(conversation_id: str):
         raise HTTPException(status_code=404, detail=f"Conversation ID {conversation_id} does not exist or has already been reset")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @app.delete("/chats/delete_all")
 def master_reset():
     try:
@@ -100,3 +106,4 @@ def master_reset():
 
 # To run the app:
 # Use: uvicorn main:app --reload
+# startup command: uvicorn main:app --host 0.0.0.0 --port 8000
