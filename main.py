@@ -8,9 +8,13 @@ from chat_title import get_chat_name
 from kgpchatroom import KGPChatroomModel
 from tags import get_tags
 from question_recommendations import question_recommendations
+import os
+import uvicorn
 
 template = Template.get_template()
 LLM = KGPChatroomModel().get_model()
+
+port = os.environ["PORT"]
 
 chat_sessions = {}
 app = FastAPI()
@@ -104,6 +108,11 @@ def master_reset():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=int(port), reload=False)
+
 # To run the app:
 # Use: uvicorn main:app --reload
 # startup command: uvicorn main:app --host 0.0.0.0 --port 8000
+# python3 main.py
