@@ -2,5 +2,6 @@ __pycache__
 kgpchatroom_env
 kgpchatroom
 .env
-*.DS_Storeote 
+*.DS_Store
 myenv
+database/
