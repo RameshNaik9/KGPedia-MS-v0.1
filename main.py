@@ -10,6 +10,23 @@ from tags import get_tags
 from question_recommendations import question_recommendations
 import os
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# CORS configuration to allow requests from specific origins
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 template = Template.get_template()
 LLM = KGPChatroomModel().get_model()
@@ -17,12 +34,12 @@ LLM = KGPChatroomModel().get_model()
 port = os.environ["PORT"]
 
 chat_sessions = {}
-app = FastAPI()
 
 class ChatRequest(BaseModel):
     conversation_id: str
     user_message: str
     chat_profile: str
+
 
 class ChatResponse(BaseModel):
     conversation_id: str
@@ -31,17 +48,20 @@ class ChatResponse(BaseModel):
     tags_list: Optional[list] = None
     questions_list: Optional[list] = None
 
+
 def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngine:
     # Initialize the session and title status if it doesn't exist
     if conversation_id not in chat_sessions:
         memory = ChatMemoryBuffer.from_defaults(token_limit=400000)
         pc_index = KGPChatroomModel().load_vector_index(chat_profile=chat_profile)
-        chat_engine = ContextChatEngine.from_defaults(retriever=pc_index.as_retriever(), memory=memory, system_prompt=template)
+        chat_engine = ContextChatEngine.from_defaults(
+            retriever=pc_index.as_retriever(), memory=memory, system_prompt=template
+        )
         chat_sessions[conversation_id] = {
-            'engine': chat_engine,
-            'title_generated': False  # Initialize title status to False
+            "engine": chat_engine,
+            "title_generated": False,  # Initialize title status to False
         }
-    return chat_sessions[conversation_id]['engine']
+    return chat_sessions[conversation_id]["engine"]
 
 
 @app.get("/")
@@ -79,8 +99,9 @@ def chat(request: ChatRequest):
         )
 
         return response_data
-    
+
     except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat_reset/{conversation_id}")
@@ -93,8 +114,10 @@ def reset_chat(conversation_id: str):
         else:
             raise KeyError
     except KeyError:
+        logger.warning(f"Attempt to reset non-existing conversation ID: {conversation_id}")
         raise HTTPException(status_code=404, detail=f"Conversation ID {conversation_id} does not exist or has already been reset")
     except Exception as e:
+        logger.error(f"Unexpected error in reset_chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/chats/delete_all")
@@ -106,6 +129,7 @@ def master_reset():
         else:
             raise HTTPException(status_code=404, detail="No active chat conversations to delete 😕")
     except Exception as e:
+        logger.error(f"Unexpected error in master_reset endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
