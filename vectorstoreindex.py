@@ -36,10 +36,16 @@ class VectorStore:
         index = load_index_from_storage(storage_context=storage_context)
         return index
 
-    # def create_vector_index(self, documents, text_splitter, host_url, category):
-    #     persist_dir = os.path.join(self.base_persist_dir, category)  # Create a path for the specific category
-    #     vector_store = self.get_vector_store(host_url)
-    #     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    #     pc_index = VectorStoreIndex.from_documents(documents, storage_context=storage_context, transformations=[text_splitter])
-    #     pc_index.storage_context.persist(persist_dir=persist_dir)
-    #     return pc_index
+    def create_vector_index(self, documents, text_splitter, host_url, category):
+        persist_dir = os.path.join(self.base_persist_dir, category)  # Create a path for the specific category
+        vector_store = self.get_vector_store(host_url)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        pc_index = VectorStoreIndex.from_documents(documents, storage_context=storage_context, transformations=[text_splitter])
+        pc_index.storage_context.persist(persist_dir=persist_dir)
+        return pc_index
+    
+    def update_vector_index(self,documents,index):
+        for i in range(len(documents)):
+            index.insert(documents[i])
+        return index
+    

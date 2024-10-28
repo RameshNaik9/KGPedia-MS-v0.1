@@ -4,3 +4,5 @@ kgpchatroom
 .env
 *.DS_Storeote 
 myenv
+database/
+chatbotquestions.md

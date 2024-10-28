@@ -9,6 +9,9 @@ from kgpchatroom import KGPChatroomModel
 from tags import get_tags
 from question_recommendations import question_recommendations
 
+import tracemalloc  
+tracemalloc.start()
+
 template = Template.get_template()
 LLM = KGPChatroomModel().get_model()
 
@@ -23,11 +26,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     conversation_id: str
     assistant_response: str
-    chat_title: Optional[str] = None  # Make title_response optional
+    chat_title: Optional[str] = None 
     tags_list: Optional[list] = None
     questions_list: Optional[list] = None
 
-def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngine:
+async def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngine:
     # Initialize the session and title status if it doesn't exist
     if conversation_id not in chat_sessions:
         memory = ChatMemoryBuffer.from_defaults(token_limit=400000)
@@ -40,12 +43,12 @@ def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngin
     return chat_sessions[conversation_id]['engine']
 
 @app.post("/chat/{conversation_id}", response_model=ChatResponse)
-def chat(request: ChatRequest):
+async def chat(request: ChatRequest):
     try:
         user_message = request.user_message
         conversation_id = request.conversation_id
         chat_profile = request.chat_profile
-        chat_engine = get_chat_engine(conversation_id, chat_profile)
+        chat_engine = await get_chat_engine(conversation_id, chat_profile)
 
         # Get the assistant response
         response = chat_engine.chat(user_message)
@@ -54,6 +57,7 @@ def chat(request: ChatRequest):
         title = None
         if not chat_sessions[conversation_id]['title_generated']:
             title = get_chat_name(user_message, response)
+            # title = chat_title(user_message, response)
             chat_sessions[conversation_id]['title_generated'] = True  # Set to True after generating title
 
         history = chat_engine.chat_history
@@ -74,7 +78,7 @@ def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat_reset/{conversation_id}")
-def reset_chat(conversation_id: str):
+async def reset_chat(conversation_id: str):
     try:
         if conversation_id in chat_sessions:
             chat_sessions[conversation_id]['engine'].reset()

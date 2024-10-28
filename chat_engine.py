@@ -349,7 +349,7 @@ class ContextChatEngine(BaseChatEngine):
         await self._memory.aput(user_message)
         await self._memory.aput(ai_message)
 
-        return AgentChatResponse(
+        return await AgentChatResponse(
             response=str(response),
             sources=[
                 ToolOutput(
