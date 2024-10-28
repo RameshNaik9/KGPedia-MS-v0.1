@@ -37,7 +37,7 @@ class KGPChatroomModel:
     def configure_models(self):
         """Configure the embedding and LLM models."""
         Settings.embed_model = GeminiEmbedding(model_name="models/text-embedding-004",api_key=self.google_api_key)
-        Settings.llm = Gemini(model_name="models/gemini-1.5-flash-8b",temperature=1,api_key=self.google_api_key)
+        Settings.llm = Gemini(model_name="models/gemini-1.5-flash-002",temperature=1,api_key=self.google_api_key)
 
     def get_model(self):
         """Return the configured LLM model."""

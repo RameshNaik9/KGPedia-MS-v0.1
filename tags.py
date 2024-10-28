@@ -19,6 +19,7 @@ def get_tags(history,LLM):
     - Events or key topics
     - Focus on concepts that could summarize or represent the essence of the conversation.
     - Return 10 tags as a simple list, separating each with a comma
+    - Don't return empty tags
     - If the conversation is based on starting off a conversation or some kind of greeting, you can ignore the first few messages and focus on the main content. Instead return only one tag, "General Conversation" to indicate the nature of the conversation.
     """
 
