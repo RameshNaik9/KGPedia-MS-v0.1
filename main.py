@@ -50,14 +50,18 @@ class ChatResponse(BaseModel):
     chat_title: Optional[str] = None 
     tags_list: Optional[list] = None
     questions_list: Optional[list] = None
+    retrieved_sources: Optional[list] = None
+    retrieved_content: Optional[list] = None
 
 async def get_chat_engine(conversation_id: str, chat_profile: str) -> ContextChatEngine:
     # Initialize the session and title status if it doesn't exist
     if conversation_id not in chat_sessions:
         memory = ChatMemoryBuffer.from_defaults(token_limit=400000)
-        pc_index = KGPChatroomModel().load_vector_index(chat_profile=chat_profile)
+        # pc_index = KGPChatroomModel().load_vector_index(chat_profile=chat_profile)
+        # keyword_index = KGPChatroomModel().load_keyword_index(chat_profile=chat_profile)
+        fusionretriever = KGPChatroomModel().get_retriever(chat_profile=chat_profile)
         chat_engine = ContextChatEngine.from_defaults(
-            retriever=pc_index.as_retriever(), memory=memory, system_prompt=template
+            retriever=fusionretriever, memory=memory, system_prompt=template
         )
         chat_sessions[conversation_id] = {
             "engine": chat_engine,
@@ -91,14 +95,23 @@ async def chat(request: ChatRequest):
 
         history = chat_engine.chat_history
         tags_list, _ = get_tags(history,LLM)
-        questions_list, _ = question_recommendations(history,LLM)        
+        questions_list, _ = question_recommendations(history,LLM) 
+
+        retrieved_nodes = KGPChatroomModel().get_retriever(chat_profile=chat_profile).retrieve(user_message)
+        sources=[]
+        information=[]
+        for node in retrieved_nodes:
+            sources.append(node.metadata)
+            information.append(node.text)
         # Create response object
         response_data = ChatResponse(
             conversation_id=conversation_id,
             assistant_response=str(response),  # Remove newline characters
             chat_title=title,  # Return title only if it was generated
             tags_list = tags_list,
-            questions_list = questions_list
+            questions_list = questions_list,
+            retrieved_sources=sources,
+            retrieved_content = information
         )
 
         return response_data
@@ -107,20 +120,20 @@ async def chat(request: ChatRequest):
         logger.error(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat_reset/{conversation_id}")
-async def reset_chat(conversation_id: str):
+@app.post("/chat_delete/{conversation_id}")
+async def delete_chat(conversation_id: str):
     try:
+        # Check if the conversation ID exists in chat_sessions
         if conversation_id in chat_sessions:
-            chat_sessions[conversation_id]['engine'].reset()
-            del chat_sessions[conversation_id]  # Reset the entire session
-            return {"message": f"Chat history for conversation {conversation_id} has been reset successfully"}
+            del chat_sessions[conversation_id]  # Delete the entire session
+            return {"message": f"The conversation {conversation_id} has been deleted successfully ♻️"}
         else:
-            raise KeyError
+            raise KeyError  # Raise an error if conversation ID does not exist
     except KeyError:
         logger.warning(f"Attempt to reset non-existing conversation ID: {conversation_id}")
-        raise HTTPException(status_code=404, detail=f"Conversation ID {conversation_id} does not exist or has already been reset")
+        raise HTTPException(status_code=404, detail=f"Conversation ID {conversation_id} does not exist or has already been deleted 🗑️")
     except Exception as e:
-        logger.error(f"Unexpected error in reset_chat endpoint: {e}")
+        logger.error(f"Unexpected error in delete_chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/chats/delete_all")
